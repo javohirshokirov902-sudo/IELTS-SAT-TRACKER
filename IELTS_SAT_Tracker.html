@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IELTS + SAT Tracker</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f3f4f6;color:#111827}
+header{background:#111827;color:white;padding:18px 22px;display:flex;justify-content:space-between;align-items:center}
+h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#cbd5e1;font-size:13px}
+main{padding:20px;max-width:1500px;margin:auto}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.card{background:white;padding:16px;border-radius:12px;border:1px solid #e5e7eb}.card small{color:#6b7280}.card b{display:block;font-size:24px;margin-top:7px}
+.box{background:white;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden}
+.head{padding:16px 18px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center}
+button{cursor:pointer;border:0;border-radius:9px;padding:9px 13px;font-weight:bold}.add{background:#111827;color:white}.reset{background:#374151;color:white}
+.wrap{overflow:auto;max-height:72vh}table{border-collapse:separate;border-spacing:0;min-width:1250px;width:100%}
+th,td{padding:8px;border-right:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;text-align:center;white-space:nowrap}
+th{position:sticky;top:0;background:#e5e7eb;z-index:2;font-size:12px}td:first-child,th:first-child{position:sticky;left:0;z-index:3;background:white}
+th:first-child{background:#e5e7eb}.today td{background:#fff7ed}.today td:first-child{background:#fff7ed}
+.status{width:108px;border-radius:18px;padding:6px 7px;font-size:12px}.done{background:#22c55e;color:#fff}.not{background:#ef4444;color:#fff}.empty{background:#e5e7eb;color:#374151}
+.progress{font-weight:bold}.percent{font-weight:bold}
+@media(max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}main{padding:10px}h1{font-size:17px}.head{align-items:flex-start;gap:10px;flex-direction:column}.add{width:100%}}
+</style>
+</head>
+<body>
+<header><div><h1>IELTS + SAT TRACKER</h1><p>Daily study tracker</p></div><button class="reset" onclick="resetAll()">Reset</button></header>
+<main>
+<div class="stats">
+<div class="card"><small>Today</small><b id="today">—</b></div>
+<div class="card"><small>Today's tasks</small><b id="tasks">0 / 7</b></div>
+<div class="card"><small>Today's progress</small><b id="pct">0%</b></div>
+<div class="card"><small>Overall</small><b id="overall">0%</b></div>
+</div>
+<div class="box"><div class="head"><div><b>Study Plan</b><div style="color:#6b7280;font-size:13px;margin-top:4px">Click a status to cycle: EMPTY → DONE → NOT H/W</div></div><button class="add" onclick="add30()">+ Add 30 days</button></div>
+<div class="wrap"><table><thead><tr><th>№</th><th>DATE</th><th>LISTENING</th><th>READING</th><th>SPEAKING</th><th>WRITING TASK 1</th><th>WRITING TASK 2</th><th>SAT MATH</th><th>SAT R/W</th><th>PROGRESS</th><th>PERCENT</th></tr></thead><tbody id="body"></tbody></table></div></div>
+</main>
+<script>
+const KEY='ielts_sat_tracker_v2', statuses=['EMPTY','DONE','NOT H/W'];
+const tasks=7;
+const iso=d=>{d=new Date(d);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
+const add=(s,n)=>{let d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)};
+const fmt=s=>{let [y,m,d]=s.split('-');return d+'.'+m+'.'+y};
+let data=JSON.parse(localStorage.getItem(KEY)||'null');
+if(!data){let start=iso(new Date());data=Array.from({length:30},(_,i)=>({date:add(start,i),s:Array(tasks).fill('EMPTY')}));save()}
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+function render(){
+let tb=document.getElementById('body');tb.innerHTML='';let today=iso(new Date());
+data.forEach((r,i)=>{
+let tr=document.createElement('tr');if(r.date===today)tr.className='today';
+let a=document.createElement('td');a.textContent=i+1;tr.appendChild(a);
+let b=document.createElement('td');b.textContent=fmt(r.date);tr.appendChild(b);
+r.s.forEach((v,j)=>{let td=document.createElement('td'),btn=document.createElement('button');btn.className='status '+(v==='DONE'?'done':v==='NOT H/W'?'not':'empty');btn.textContent=v;btn.onclick=()=>{r.s[j]=statuses[(statuses.indexOf(r.s[j])+1)%3];save();render()};td.appendChild(btn);tr.appendChild(td)});
+let n=r.s.filter(x=>x==='DONE').length;
+let p=document.createElement('td');p.className='progress';p.textContent=n+'/7';tr.appendChild(p);
+let q=document.createElement('td');q.className='percent';q.textContent=Math.round(n/7*100)+'%';tr.appendChild(q);tb.appendChild(tr)});
+let r=data.find(x=>x.date===today),n=r?r.s.filter(x=>x==='DONE').length:0;
+document.getElementById('today').textContent=fmt(today);document.getElementById('tasks').textContent=n+'/7';document.getElementById('pct').textContent=Math.round(n/7*100)+'%';
+let all=data.reduce((a,r)=>a+r.s.filter(x=>x==='DONE').length,0);document.getElementById('overall').textContent=Math.round(all/(data.length*7)*100)+'%';
+}
+function add30(){let last=data[data.length-1].date;for(let i=1;i<=30;i++)data.push({date:add(last,i),s:Array(7).fill('EMPTY')});save();render()}
+function resetAll(){if(confirm('Reset all tracker data?')){localStorage.removeItem(KEY);location.reload()}}
+render();
+</script>
+</body></html>
